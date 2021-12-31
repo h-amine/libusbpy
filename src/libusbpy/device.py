@@ -97,7 +97,7 @@ class LibusbDevice:
         """
         return LibusbDeviceSpeed(libusb.get_device_speed(self._device))
 
-    def get_device_descriptor(self) -> DeviceDescriptor:
+    def get_device_descriptor(self) -> LibusbDeviceDescriptor:
         """
         Get the USB device descriptor for a given device.
         if the underlying libusb function call fails, a LibusbException will be thrown.
@@ -107,9 +107,9 @@ class LibusbDevice:
         ret = libusb.get_device_descriptor(self._device, ct.byref(desc))
         if ret != libusb.LIBUSB_SUCCESS:
             raise LibusbException(ret)
-        return DeviceDescriptor(desc)
+        return LibusbDeviceDescriptor(desc)
 
-    def get_active_config_descriptor(self) -> ConfigurationDescriptor:
+    def get_active_config_descriptor(self) -> LibusbConfigurationDescriptor:
         """
         Get the USB configuration descriptor for the currently active configuration.
         This is a non-blocking function which does not involve any requests being sent to the device.
@@ -120,11 +120,11 @@ class LibusbDevice:
         ret = libusb.get_active_config_descriptor(self._device, ct.byref(c_config))
         if ret != libusb.LIBUSB_SUCCESS:
             raise LibusbException(ret)
-        config = ConfigurationDescriptor(c_config[0])
+        config = LibusbConfigurationDescriptor(c_config[0])
         libusb.free_config_descriptor(c_config)
         return config
 
-    def get_config_descriptor(self, index: int) -> ConfigurationDescriptor:
+    def get_config_descriptor(self, index: int) -> LibusbConfigurationDescriptor:
         """
         Get a USB configuration descriptor based on its index.
         This is a non-blocking function which does not involve any requests being sent to the device.
@@ -136,7 +136,7 @@ class LibusbDevice:
         ret = libusb.get_config_descriptor(self._device, index, ct.byref(c_config))
         if ret != libusb.LIBUSB_SUCCESS:
             raise LibusbException(ret)
-        config = ConfigurationDescriptor(c_config[0])
+        config = LibusbConfigurationDescriptor(c_config[0])
         libusb.free_config_descriptor(c_config)
         return config
 

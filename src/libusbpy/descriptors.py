@@ -4,18 +4,15 @@ import ctypes as ct
 import libusb
 
 
-class Descriptor:
+class LibusbDescriptor:
     """
     This is the parent class of all the usb descriptors.
     Attributes of a descriptor can be read by indexing the attribute's name(exp: descriptor['bDescriptorType']).
-    All usb descriptors have these common attributes:
-        * bLength
-        * bDescriptorType
     """
     def __init__(self, descriptor: ct.Structure) -> None:
         """
-        Descriptor object initializer.
-        :param descriptor:
+        LibusbDescriptor object initializer.
+        :param descriptor: Usb descriptor.
         """
         self._bLength = descriptor.bLength
         self._bDescriptorType = descriptor.bDescriptorType
@@ -29,8 +26,16 @@ class Descriptor:
         return getattr(self, "_" + field)
 
 
-class DeviceDescriptor(Descriptor):
-    def __init__(self, descriptor: libusb.device_descriptor):
+class LibusbDeviceDescriptor(LibusbDescriptor):
+    """
+    A class representing the standard USB device descriptor.
+    Attributes of a descriptor can be read by indexing the attribute's name(exp: descriptor['bDescriptorType']).
+    """
+    def __init__(self, descriptor: libusb.device_descriptor) -> None:
+        """
+        LibusbDeviceDescriptor object initializer.
+        :param descriptor: Usb device descriptor.
+        """
         super().__init__(descriptor)
         self._bcdUSB = descriptor.bcdUSB
         self._bDeviceClass = descriptor.bDeviceClass
@@ -45,7 +50,11 @@ class DeviceDescriptor(Descriptor):
         self._iSerialNumber = descriptor.iSerialNumber
         self._bNumConfigurations = descriptor.bNumConfigurations
 
-    def __str__(self):
+    def __str__(self) -> str:
+        """
+        Returns the descriptor as a string.
+        :return: The descriptor as a string.
+        """
         return                                                           \
             F"Device Descriptor\n"                                       \
             F"  bLength           : 0x{self._bLength           :0>2x}\n" \
@@ -64,8 +73,16 @@ class DeviceDescriptor(Descriptor):
             F"  bNumConfigurations: 0x{self._bNumConfigurations:0>2x}"
 
 
-class EndpointDescriptor(Descriptor):
-    def __init__(self, descriptor: libusb.endpoint_descriptor):
+class LibusbEndpointDescriptor(LibusbDescriptor):
+    """
+    A class representing the standard USB endpoint descriptor.
+    Attributes of a descriptor can be read by indexing the attribute's name(exp: descriptor['bDescriptorType']).
+    """
+    def __init__(self, descriptor: libusb.endpoint_descriptor) -> None:
+        """
+        LibusbEndpointDescriptor object initializer.
+        :param descriptor: Usb device descriptor.
+        """
         super().__init__(descriptor)
         self._bEndpointAddress = descriptor.bEndpointAddress
         self._bmAttributes = descriptor.bmAttributes
@@ -75,7 +92,11 @@ class EndpointDescriptor(Descriptor):
         self._bSynchAddress = descriptor.bSynchAddress
         self._extra = bytes(descriptor.extra[0:descriptor.extra_length])
 
-    def __str__(self):
+    def __str__(self) -> str:
+        """
+        Returns the descriptor as a string.
+        :return: The descriptor as a string.
+        """
         ep_str = F"      Endpoint Descriptor\n"                                   \
                  F"          bLength         : 0x{self._bLength         :0>2x}\n" \
                  F"          bDescriptorType : 0x{self._bDescriptorType :0>2x}\n" \
@@ -91,8 +112,16 @@ class EndpointDescriptor(Descriptor):
         return ep_str
 
 
-class InterfaceDescriptor(Descriptor):
-    def __init__(self, descriptor: libusb.interface_descriptor):
+class LibusbInterfaceDescriptor(LibusbDescriptor):
+    """
+    A class representing the standard USB interface descriptor.
+    Attributes of a descriptor can be read by indexing the attribute's name(exp: descriptor['bDescriptorType']).
+    """
+    def __init__(self, descriptor: libusb.interface_descriptor) -> None:
+        """
+        LibusbInterfaceDescriptor object initializer.
+        :param descriptor: Usb device descriptor.
+        """
         super().__init__(descriptor)
         self._bInterfaceNumber = descriptor.bInterfaceNumber
         self._bAlternateSetting = descriptor.bAlternateSetting
@@ -101,11 +130,15 @@ class InterfaceDescriptor(Descriptor):
         self._bInterfaceSubClass = descriptor.bInterfaceSubClass
         self._bInterfaceProtocol = descriptor.bInterfaceProtocol
         self._iInterface = descriptor.iInterface
-        self._endpoint = tuple([EndpointDescriptor(descriptor.endpoint[index])
+        self._endpoint = tuple([LibusbEndpointDescriptor(descriptor.endpoint[index])
                                 for index in range(0, descriptor.bNumEndpoints)])
         self._extra = bytes(descriptor.extra[0:descriptor.extra_length])
 
-    def __str__(self):
+    def __str__(self) -> str:
+        """
+        Returns the descriptor as a string.
+        :return: The descriptor as a string.
+        """
         inter_str = F"  Interface Descriptor\n"                                      \
                     F"      bLength           : 0x{self._bLength           :0>2x}\n" \
                     F"      bDescriptorType   : 0x{self._bDescriptorType   :0>2x}\n" \
@@ -125,20 +158,31 @@ class InterfaceDescriptor(Descriptor):
         return inter_str
 
 
-class Interface:
+class LibusbInterface:
+    """
+    A collection of alternate settings for a particular USB interface.
+    """
     def __init__(self, interface: libusb.interface):
-        self._altsetting = tuple([InterfaceDescriptor(interface.altsetting[index])
+        """
+        LibusbInterface object initializer.
+        :param interface: Usb interface.
+        """
+        self._altsetting = tuple([LibusbInterfaceDescriptor(interface.altsetting[index])
                                   for index in range(0, interface.num_altsetting)])
 
-    def __getitem__(self, field: str) -> tuple:
+    def __getitem__(self, index: int) -> LibusbInterfaceDescriptor:
         """
-        Returns the attribute's value.
-        :param field: Field name.
+        Returns the alternate setting number: index.
+        :param index: The alternate setting index
         :return: value.
         """
-        return getattr(self, "_" + field)
+        return self._altsetting[index]
 
-    def __str__(self):
+    def __str__(self) -> str:
+        """
+        Returns the descriptor as a string.
+        :return: The descriptor as a string.
+        """
         inter_str = str()
         nbr_alt = len(self._altsetting)
         for index in range(0, nbr_alt):
@@ -149,8 +193,15 @@ class Interface:
         return inter_str
 
 
-class ConfigurationDescriptor(Descriptor):
-    def __init__(self, descriptor: libusb.config_descriptor):
+class LibusbConfigurationDescriptor(LibusbDescriptor):
+    """
+    A class representing the standard USB configuration descriptor.
+    """
+    def __init__(self, descriptor: libusb.config_descriptor) -> None:
+        """
+        LibusbConfigurationDescriptor object initializer.
+        :param descriptor: Usb device descriptor.
+        """
         super().__init__(descriptor)
         self._wTotalLength = descriptor.wTotalLength
         self._bNumInterfaces = descriptor.bNumInterfaces
@@ -158,10 +209,15 @@ class ConfigurationDescriptor(Descriptor):
         self._iConfiguration = descriptor.iConfiguration
         self._bmAttributes = descriptor.bmAttributes
         self._MaxPower = descriptor.MaxPower
-        self._interface = tuple([Interface(descriptor.interface[index]) for index in range(0, self._bNumInterfaces)])
+        self._interface = tuple([LibusbInterface(descriptor.interface[index])
+                                 for index in range(0, self._bNumInterfaces)])
         self._extra = bytes(descriptor.extra[0:descriptor.extra_length])
 
-    def __str__(self):
+    def __str__(self) -> str:
+        """
+        Returns the descriptor as a string.
+        :return: The descriptor as a string.
+        """
         conf_str = F"Configuration Descriptor\n"                                  \
                    F"  bLength            : 0x{self._bLength            :0>2x}\n" \
                    F"  bDescriptorType    : 0x{self._bDescriptorType    :0>2x}\n" \
