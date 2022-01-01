@@ -1,4 +1,6 @@
 from __future__ import annotations
+
+import libusb
 from deprecated import deprecated
 
 from .defines import *
@@ -21,11 +23,14 @@ class LibusbDevice:
 
     def __del__(self) -> None:
         """
-        Frees the underlying usb device reference.
+        Frees the underlying usb device.
         :return: None
         """
-        libusb.unref_device(self._device)
+        self.unref_device()
 
+    # ******************************************************************************************************************
+    # USB handling and enumeration methods *****************************************************************************
+    # ******************************************************************************************************************
     def get_bus_number(self) -> int:
         """
         Get the number of the bus that a device is connected to.
@@ -97,6 +102,51 @@ class LibusbDevice:
         """
         return LibusbDeviceSpeed(libusb.get_device_speed(self._device))
 
+    def get_max_packet_size(self, endpoint: int) -> int:
+        """
+        Convenience function to retrieve the wMaxPacketSize value for a particular endpoint in the active device
+        configuration. If you're dealing with isochronous transfers, you probably want Device.get_max_iso_packet_size()
+        instead.
+        if the underlying libusb function call fails, a LibusbException will be thrown.
+        :param endpoint: Address of the endpoint in question.
+        :return: The wMaxPacketSize value.
+        """
+        ret = libusb.get_max_packet_size(self._device, endpoint)
+        if ret == libusb.LIBUSB_SUCCESS:
+            return int(ret)
+        raise LibusbException(ret)
+
+    def get_max_iso_packet_size(self, endpoint: int) -> int:
+        """
+        Calculate the maximum packet size which a specific endpoint is capable is sending or receiving in the duration
+        of 1 microframe.
+        if the underlying libusb function call fails, a LibusbException will be thrown.
+        :param endpoint: Address of the endpoint in question.
+        :return: The maximum packet size which can be sent/received on this endpoint.
+        """
+        ret = libusb.get_max_iso_packet_size(self._device, endpoint)
+        if ret == libusb.LIBUSB_SUCCESS:
+            return int(ret)
+        raise LibusbException(ret)
+
+    def ref_device(self) -> None:
+        """
+        Increment the reference count of the underlying libusb device.
+        :return: None
+        """
+        libusb.ref_device(self._device)
+
+    def unref_device(self) -> None:
+        """
+        Decrement the reference count of the underlying libusb device. If the decrement operation causes the reference
+        count to reach zero, the underlying libusb device shall be destroyed.
+        :return: None
+        """
+        libusb.unref_device(self._device)
+
+    # ******************************************************************************************************************
+    # USB descriptors methods ******************************************************************************************
+    # ******************************************************************************************************************
     def get_device_descriptor(self) -> LibusbDeviceDescriptor:
         """
         Get the USB device descriptor for a given device.
