@@ -1,5 +1,4 @@
 from __future__ import annotations
-
 import ctypes as ct
 import libusb
 
@@ -9,13 +8,14 @@ class LibusbDescriptor:
     This is the parent class of all the usb descriptors.
     Attributes of a descriptor can be read by indexing the attribute's name(exp: descriptor['bDescriptorType']).
     """
-    def __init__(self, descriptor: ct.Structure) -> None:
+    def __init__(self, descriptor: ct.POINTER(ct.Structure)) -> None:
         """
         LibusbDescriptor object initializer.
         :param descriptor: Usb descriptor.
         """
-        self._bLength = descriptor.bLength
-        self._bDescriptorType = descriptor.bDescriptorType
+        self._descriptor = descriptor
+        self._bLength = descriptor[0].bLength
+        self._bDescriptorType = descriptor[0].bDescriptorType
 
     def __getitem__(self, field: str) -> int | tuple | bytes:
         """
@@ -31,24 +31,24 @@ class LibusbDeviceDescriptor(LibusbDescriptor):
     A class representing the standard USB device descriptor.
     Attributes of a descriptor can be read by indexing the attribute's name(exp: descriptor['bDescriptorType']).
     """
-    def __init__(self, descriptor: libusb.device_descriptor) -> None:
+    def __init__(self, descriptor: ct.POINTER(libusb.device_descriptor)) -> None:
         """
         LibusbDeviceDescriptor object initializer.
-        :param descriptor: Usb device descriptor.
+        :param descriptor: Usb descriptor.
         """
         super().__init__(descriptor)
-        self._bcdUSB = descriptor.bcdUSB
-        self._bDeviceClass = descriptor.bDeviceClass
-        self._bDeviceSubClass = descriptor.bDeviceSubClass
-        self._bDeviceProtocol = descriptor.bDeviceProtocol
-        self._bMaxPacketSize0 = descriptor.bMaxPacketSize0
-        self._idVendor = descriptor.idVendor
-        self._idProduct = descriptor.idProduct
-        self._bcdDevice = descriptor.bcdDevice
-        self._iManufacturer = descriptor.iManufacturer
-        self._iProduct = descriptor.iProduct
-        self._iSerialNumber = descriptor.iSerialNumber
-        self._bNumConfigurations = descriptor.bNumConfigurations
+        self._bcdUSB = descriptor[0].bcdUSB
+        self._bDeviceClass = descriptor[0].bDeviceClass
+        self._bDeviceSubClass = descriptor[0].bDeviceSubClass
+        self._bDeviceProtocol = descriptor[0].bDeviceProtocol
+        self._bMaxPacketSize0 = descriptor[0].bMaxPacketSize0
+        self._idVendor = descriptor[0].idVendor
+        self._idProduct = descriptor[0].idProduct
+        self._bcdDevice = descriptor[0].bcdDevice
+        self._iManufacturer = descriptor[0].iManufacturer
+        self._iProduct = descriptor[0].iProduct
+        self._iSerialNumber = descriptor[0].iSerialNumber
+        self._bNumConfigurations = descriptor[0].bNumConfigurations
 
     def __str__(self) -> str:
         """
@@ -73,24 +73,52 @@ class LibusbDeviceDescriptor(LibusbDescriptor):
             F"  bNumConfigurations: 0x{self._bNumConfigurations:0>2x}"
 
 
+class LibusbSsEndpointCompanionDescriptor(LibusbDescriptor):
+    """
+    A class representing the superspeed endpoint companion descriptor.
+    Attributes of a descriptor can be read by indexing the attribute's name(exp: descriptor['bDescriptorType']).
+    """
+    def __init__(self, descriptor: ct.POINTER(libusb.ss_endpoint_companion_descriptor)) -> None:
+        """
+        LibusbSsEndpointCompanionDescriptor object initializer.
+        :param descriptor: Usb descriptor.
+        """
+        super().__init__(descriptor)
+        self._bMaxBurst = descriptor[0].bMaxBurst
+        self._bmAttributes = descriptor[0].bmAttributes
+        self._wBytesPerInterval = descriptor[0].wBytesPerInterval
+
+    def __str__(self) -> str:
+        """
+        Returns the descriptor as a string.
+        :return: The descriptor as a string.
+        """
+        return F"SS Endpoint Companion Descriptor\n"                       \
+               F"   bLength          : 0x{self._bLength          :0>2x}\n" \
+               F"   bDescriptorType  : 0x{self._bDescriptorType  :0>2x}\n" \
+               F"   bMaxBurst        : 0x{self._bMaxBurst        :0>2x}\n" \
+               F"   bmAttributes     : 0x{self._bmAttributes     :0>2x}\n" \
+               F"   wBytesPerInterval: 0x{self._wBytesPerInterval:0>4x}"
+
+
 class LibusbEndpointDescriptor(LibusbDescriptor):
     """
     A class representing the standard USB endpoint descriptor.
     Attributes of a descriptor can be read by indexing the attribute's name(exp: descriptor['bDescriptorType']).
     """
-    def __init__(self, descriptor: libusb.endpoint_descriptor) -> None:
+    def __init__(self, descriptor: ct.POINTER(libusb.endpoint_descriptor)) -> None:
         """
         LibusbEndpointDescriptor object initializer.
-        :param descriptor: Usb device descriptor.
+        :param descriptor: Usb descriptor.
         """
         super().__init__(descriptor)
-        self._bEndpointAddress = descriptor.bEndpointAddress
-        self._bmAttributes = descriptor.bmAttributes
-        self._wMaxPacketSize = descriptor.wMaxPacketSize
-        self._bInterval = descriptor.bInterval
-        self._bRefresh = descriptor.bRefresh
-        self._bSynchAddress = descriptor.bSynchAddress
-        self._extra = bytes(descriptor.extra[0:descriptor.extra_length])
+        self._bEndpointAddress = descriptor[0].bEndpointAddress
+        self._bmAttributes = descriptor[0].bmAttributes
+        self._wMaxPacketSize = descriptor[0].wMaxPacketSize
+        self._bInterval = descriptor[0].bInterval
+        self._bRefresh = descriptor[0].bRefresh
+        self._bSynchAddress = descriptor[0].bSynchAddress
+        self._extra = bytes(descriptor[0].extra[0:descriptor[0].extra_length])
 
     def __str__(self) -> str:
         """
@@ -117,22 +145,22 @@ class LibusbInterfaceDescriptor(LibusbDescriptor):
     A class representing the standard USB interface descriptor.
     Attributes of a descriptor can be read by indexing the attribute's name(exp: descriptor['bDescriptorType']).
     """
-    def __init__(self, descriptor: libusb.interface_descriptor) -> None:
+    def __init__(self, descriptor: ct.POINTER(libusb.interface_descriptor)) -> None:
         """
         LibusbInterfaceDescriptor object initializer.
-        :param descriptor: Usb device descriptor.
+        :param descriptor: Usb descriptor.
         """
         super().__init__(descriptor)
-        self._bInterfaceNumber = descriptor.bInterfaceNumber
-        self._bAlternateSetting = descriptor.bAlternateSetting
-        self._bNumEndpoints = descriptor.bNumEndpoints
-        self._bInterfaceClass = descriptor.bInterfaceClass
-        self._bInterfaceSubClass = descriptor.bInterfaceSubClass
-        self._bInterfaceProtocol = descriptor.bInterfaceProtocol
-        self._iInterface = descriptor.iInterface
-        self._endpoint = tuple([LibusbEndpointDescriptor(descriptor.endpoint[index])
-                                for index in range(0, descriptor.bNumEndpoints)])
-        self._extra = bytes(descriptor.extra[0:descriptor.extra_length])
+        self._bInterfaceNumber = descriptor[0].bInterfaceNumber
+        self._bAlternateSetting = descriptor[0].bAlternateSetting
+        self._bNumEndpoints = descriptor[0].bNumEndpoints
+        self._bInterfaceClass = descriptor[0].bInterfaceClass
+        self._bInterfaceSubClass = descriptor[0].bInterfaceSubClass
+        self._bInterfaceProtocol = descriptor[0].bInterfaceProtocol
+        self._iInterface = descriptor[0].iInterface
+        self._endpoint = tuple([LibusbEndpointDescriptor(ct.pointer(descriptor[0].endpoint[index]))
+                                for index in range(0, descriptor[0].bNumEndpoints)])
+        self._extra = bytes(descriptor[0].extra[0:descriptor[0].extra_length])
 
     def __str__(self) -> str:
         """
@@ -167,7 +195,7 @@ class LibusbInterface:
         LibusbInterface object initializer.
         :param interface: Usb interface.
         """
-        self._altsetting = tuple([LibusbInterfaceDescriptor(interface.altsetting[index])
+        self._altsetting = tuple([LibusbInterfaceDescriptor(ct.pointer(interface.altsetting[index]))
                                   for index in range(0, interface.num_altsetting)])
 
     def __getitem__(self, index: int) -> LibusbInterfaceDescriptor:
@@ -197,21 +225,28 @@ class LibusbConfigurationDescriptor(LibusbDescriptor):
     """
     A class representing the standard USB configuration descriptor.
     """
-    def __init__(self, descriptor: libusb.config_descriptor) -> None:
+    def __init__(self, descriptor: ct.POINTER(libusb.config_descriptor)) -> None:
         """
         LibusbConfigurationDescriptor object initializer.
-        :param descriptor: Usb device descriptor.
+        :param descriptor: Usb descriptor.
         """
         super().__init__(descriptor)
-        self._wTotalLength = descriptor.wTotalLength
-        self._bNumInterfaces = descriptor.bNumInterfaces
-        self._bConfigurationValue = descriptor.bConfigurationValue
-        self._iConfiguration = descriptor.iConfiguration
-        self._bmAttributes = descriptor.bmAttributes
-        self._MaxPower = descriptor.MaxPower
-        self._interface = tuple([LibusbInterface(descriptor.interface[index])
+        self._wTotalLength = descriptor[0].wTotalLength
+        self._bNumInterfaces = descriptor[0].bNumInterfaces
+        self._bConfigurationValue = descriptor[0].bConfigurationValue
+        self._iConfiguration = descriptor[0].iConfiguration
+        self._bmAttributes = descriptor[0].bmAttributes
+        self._MaxPower = descriptor[0].MaxPower
+        self._interface = tuple([LibusbInterface(descriptor[0].interface[index])
                                  for index in range(0, self._bNumInterfaces)])
-        self._extra = bytes(descriptor.extra[0:descriptor.extra_length])
+        self._extra = bytes(descriptor[0].extra[0:descriptor[0].extra_length])
+
+    def __del__(self) -> None:
+        """
+        Frees the underlying usb configuration descriptor.
+        :return: None
+        """
+        libusb.free_config_descriptor(self._descriptor)
 
     def __str__(self) -> str:
         """

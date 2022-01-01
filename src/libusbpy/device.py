@@ -1,6 +1,4 @@
 from __future__ import annotations
-
-import libusb
 from deprecated import deprecated
 
 from .defines import *
@@ -157,7 +155,7 @@ class LibusbDevice:
         ret = libusb.get_device_descriptor(self._device, ct.byref(desc))
         if ret != libusb.LIBUSB_SUCCESS:
             raise LibusbException(ret)
-        return LibusbDeviceDescriptor(desc)
+        return LibusbDeviceDescriptor(ct.pointer(desc))
 
     def get_active_config_descriptor(self) -> LibusbConfigurationDescriptor:
         """
@@ -170,9 +168,7 @@ class LibusbDevice:
         ret = libusb.get_active_config_descriptor(self._device, ct.byref(c_config))
         if ret != libusb.LIBUSB_SUCCESS:
             raise LibusbException(ret)
-        config = LibusbConfigurationDescriptor(c_config[0])
-        libusb.free_config_descriptor(c_config)
-        return config
+        return LibusbConfigurationDescriptor(c_config)
 
     def get_config_descriptor(self, index: int) -> LibusbConfigurationDescriptor:
         """
@@ -186,9 +182,7 @@ class LibusbDevice:
         ret = libusb.get_config_descriptor(self._device, index, ct.byref(c_config))
         if ret != libusb.LIBUSB_SUCCESS:
             raise LibusbException(ret)
-        config = LibusbConfigurationDescriptor(c_config[0])
-        libusb.free_config_descriptor(c_config)
-        return config
+        return LibusbConfigurationDescriptor(c_config[0])
 
 
 class LibusbDeviceList:
