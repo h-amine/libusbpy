@@ -49,6 +49,14 @@ class LibusbContext:
         """
         self.exit()
 
+    @property
+    def context(self) -> ct.POINTER(libusb.context) | None:
+        """
+        Returns the underlying libusb context.
+        :return: The underlying libusb context.
+        """
+        return self._context
+
     def init(self) -> None:
         """
         Initialize libusb. This method must be called before calling any other libusb function.

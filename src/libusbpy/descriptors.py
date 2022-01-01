@@ -2,6 +2,9 @@ from __future__ import annotations
 import ctypes as ct
 import libusb
 
+from .context import LibusbContext
+from .exceptions import LibusbException
+
 
 class LibusbDescriptor:
     """
@@ -24,6 +27,14 @@ class LibusbDescriptor:
         :return: value.
         """
         return getattr(self, "_" + field)
+
+    @property
+    def descriptor(self) -> ct.POINTER(ct.Structure):
+        """
+        Returns the underlying libusb descriptor.
+        :return: The underlying libusb descriptor.
+        """
+        return self._descriptor
 
 
 class LibusbDeviceDescriptor(LibusbDescriptor):
@@ -88,6 +99,13 @@ class LibusbSsEndpointCompanionDescriptor(LibusbDescriptor):
         self._bmAttributes = descriptor[0].bmAttributes
         self._wBytesPerInterval = descriptor[0].wBytesPerInterval
 
+    def __del__(self) -> None:
+        """
+        Frees the underlying libusb ss_endpoint_companion_desc.
+        :return: None
+        """
+        libusb.free_ss_endpoint_companion_descriptor(self._descriptor)
+
     def __str__(self) -> str:
         """
         Returns the descriptor as a string.
@@ -138,6 +156,26 @@ class LibusbEndpointDescriptor(LibusbDescriptor):
         if len(self._extra) > 0:
             ep_str = ep_str + F"\n          extra           : {self._extra.hex()}"
         return ep_str
+
+    def get_ss_endpoint_companion_descriptor(self, context: LibusbContext | None) \
+            -> LibusbSsEndpointCompanionDescriptor:
+        """
+        Get the endpoints superspeed endpoint companion descriptor (if any).
+        If the underlying libusb function call fails, a LibusbException will be thrown.
+        :param context: The LibusbContext.
+        :return: The superspeed endpoint companion descriptor.
+        """
+        if context is None:
+            _ctx = None
+        else:
+            _ctx = context.context()
+
+        ep_comp = ct.POINTER(libusb.ss_endpoint_companion_descriptor)()
+        ret = libusb.get_ss_endpoint_companion_descriptor(_ctx, self.descriptor, ct.byref(ep_comp))
+        if ret == libusb.LIBUSB_SUCCESS:
+            return LibusbSsEndpointCompanionDescriptor(ep_comp)
+
+        raise LibusbException(ret)
 
 
 class LibusbInterfaceDescriptor(LibusbDescriptor):
